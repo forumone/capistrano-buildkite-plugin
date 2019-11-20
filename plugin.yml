@@ -1,0 +1,15 @@
+name: Capistrano
+author: Forum One
+description: Deploys code via Capistrano
+
+requirements: [jq, docker]
+
+configuration:
+  required: [branches]
+  additionalProperties: false
+  properties:
+    require-stage:
+      type: boolean
+    branches:
+      additionalProperties:
+        type: string

@@ -1,0 +1,174 @@
+#!/bin/bash
+
+set -euo pipefail
+
+should-fail() {
+  test "${BUILDKITE_PLUGIN_CAPISTRANO_REQUIRE_STAGE:-false}" == true
+}
+
+soft-fail() {
+  ! should-fail
+}
+
+# jq filter to extract Capistrano config (used because the BK plugin process isn't
+# case-sensitive, but branch names *are* on Linux hosts)
+get_config_filter='
+  # Return only the first element in the generator expression
+  first(
+    # Convert {"<plugin>": <config>} ==> {"key": "<plugin>", "value": <config>}
+    map(to_entries)
+    # Flatten entries
+    | flatten
+    # Yield each array element in turn
+    | .[]
+    # Find only keys that match "capistrano"
+    | select(.key | contains("capistrano"))
+  )
+  | .value
+'
+
+# jq filter to determine which cap stage we're deploying to, based on the branch
+# being built
+#
+# shellcheck disable=SC2016
+find_branch_filter='
+  # Look up the branch name
+  .branches[$branch]
+  # Ignore non-string values (i.e., null)
+  | strings
+'
+
+# jq filter to list all available branches as "<branch>: <stage>" pairs
+list_branches_filter='
+  .branches
+  | to_entries
+  | .[]
+  # With -r, this will simply print text to the console
+  | "Branch: \"\(.key)\" deploys to stage \"\(.value)\""
+'
+
+# jq filter to determine number of branches present
+count_branches_filter='
+  .branches
+  | length
+'
+
+# jq filter to determine if the user maybe wrote "<stage>: <branch>" in their
+# configuration by accident
+#
+# shellcheck disable=SC2016
+reverse_branches_filter='
+  first(
+    .branches
+    | to_entries
+    | .[]
+    # Find entries where the value (not the key) matches $branch
+    | select(.value == $branch)
+  )
+  | .key
+  | strings
+'
+
+# Should this be configurable?
+ruby_image="ruby:2.3"
+
+# Script to inject into the Ruby container to perform Capistrano deployments - it's a
+# string like this because we don't get access to rsync by default, which is needed for
+# our scm providers.
+#
+# Disable this check because we want "$CAP_ENV" to be evaluated by the shell in the
+# container, not here.
+# shellcheck disable=SC2016
+deploy_script='
+  # Install rsync
+  apt-get update -y
+  apt-get install -y rsync
+
+  # Install dependencies
+  bundle install
+
+  # Deploy!
+  bundle exec cap "$CAP_ENV" deploy ignore_rsync_stage=true
+'
+
+# Prints args to stderr
+print-error() {
+  echo "$@" >/dev/stderr
+}
+
+# Prints warning to stderr
+warn() {
+  print-error "WARNING:" "$@"
+}
+
+echo '~~~ :capistrano: Deploying...'
+
+# Load plugin configuration
+config="$(echo "$BUILDKITE_PLUGINS" | jq -r "$get_config_filter")"
+
+# Determine which environment we're deploying to
+stage="$(echo "$config" | jq -r --arg branch "$BUILDKITE_BRANCH" "$find_branch_filter")"
+
+# If we found a stage, go ahead and deploy
+if test -n "$stage"; then
+  echo "Deploying $BUILDKITE_BRANCH to $stage"
+
+  # Include SSH forwarding by default (if we can find it)
+  ssh_args=()
+  if [[ -v SSH_AUTH_SOCK ]]; then
+    ssh_args=(
+      -v "$(dirname "$SSH_AUTH_SOCK")":"$(dirname "$SSH_AUTH_SOCK")"
+      -e "SSH_AUTH_SOCK=$SSH_AUTH_SOCK"
+      -v "$HOME/.ssh:/root/.ssh"
+    )
+  fi
+
+  docker run \
+    --rm -it \
+    "${ssh_args[@]}" \
+    -v "$PWD:/app" \
+    -e BUNDLE_PATH=/app/.bundle \
+    -e CAP_ENV="$stage" \
+    -w /app \
+    "$ruby_image" \
+    sh -e -c "$deploy_script"
+
+  # Now that we're done, exit - this skips the error-handling logic below
+  exit 0
+fi
+
+# Since we couldn't find any branches, let's check for possible configuration mistakes
+
+# Did the user remember the configuration?
+branch_count="$(echo "$config" | jq -r "$count_branches_filter")"
+if test -z "$branch_count" || test "$branch_count" -eq 0; then
+  warn "You have not configured any stages"
+  warn "Remember to set the branches: option in your plugin configuration"
+fi
+
+# If we can detect that someone got the configuration backwards, then let's call that out
+reverse="$(echo "$config" | jq -r --arg branch "$BUILDKITE_BRANCH" "$reverse_branches_filter")"
+if test -n "$reverse"; then
+  warn "I found the line '$reverse: $BUILDKITE_BRANCH' in your configuration"
+  warn "Remember that the mapping is from branches to Capistrano stages"
+  warn "Try using '$BUILDKITE_BRANCH: $reverse' instead"
+fi
+
+# If we soft fail, just indicate that there's nothing to do - we've already printed
+# configuration warnings
+if soft-fail; then
+  echo "Branch $BUILDKITE_BRANCH has no deployment destination"
+  exit 0
+fi
+
+# When asked to hard fail, dump the discovered configuration and branch in order to assist
+# in triaging
+print-error ":rotating_light: Failed to determine a stage to deploy to"
+print-error
+print-error "Current branch: $BUILDKITE_BRANCH"
+print-error "Your configured mapping:"
+echo "$config" | jq -r "$list_branches_filter" | while read -r line; do
+  print-error "  * $line"
+done
+
+exit 1
