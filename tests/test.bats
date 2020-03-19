@@ -20,6 +20,28 @@ load helpers
   unstub docker
 }
 
+@test "Deploys master to dev with custom arguments" {
+  export BUILDKITE_PLUGIN_CAPISTRANO_EXTRA_ARGS_0=foo=bar
+  export BUILDKITE_PLUGIN_CAPISTRANO_EXTRA_ARGS_1=abc=def
+  export BUILDKITE_PLUGINS="$(create-config master=dev stable=staging)"
+  export BUILDKITE_BRANCH=master
+
+  # Stub docker so that it outputs its arguments
+  # (this is easier to do than pattern-matching on the inline script argument)
+  stub docker \
+    'run --rm -it * : echo "$@"'
+
+  run "$PWD/hooks/command"
+
+  assert_success
+
+  # Assert that the output includes the two arguments that were added via the extra-args
+  # config (use --partial because there may be some whitespace funny business)
+  assert_output --partial "foo=bar abc=def"
+
+  unstub docker
+}
+
 @test "Ignores non-existing branches" {
   export BUILDKITE_PLUGINS="$(create-config master=dev)"
   export BUILDKITE_BRANCH=ABC123-some-feature

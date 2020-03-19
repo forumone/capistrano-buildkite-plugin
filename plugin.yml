@@ -13,3 +13,7 @@ configuration:
     branches:
       additionalProperties:
         type: string
+    extra-args:
+      type: array
+      items:
+        type: string
