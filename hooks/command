@@ -2,9 +2,18 @@
 
 set -euo pipefail
 
-declare -a extra_args
+# Arguments to pass to to the inline Capistrano shell script
+script_args=(
+  # This is $0 in the script: when using the -c syntax (as in sh -c '...' foo bar), the
+  # first argument is interpreted by bash as being $0 (the name of the program) instead
+  # of the start of $@ (which begins with $1).
+  UNUSED
 
-# Read the extra-args configuration into a bash array
+  # We set this for all Capistrano invocations - by placing it here, we
+  "ignore_rsync_stage=true"
+)
+
+# Read the extra-args configuration into the script_args array
 i=0
 while true; do
   key="BUILDKITE_PLUGIN_CAPISTRANO_EXTRA_ARGS_$i"
@@ -12,7 +21,7 @@ while true; do
     break
   fi
 
-  extra_args+=("${!key}")
+  script_args+=("${!key}")
 
   i=$((i+1))
 done
@@ -103,7 +112,7 @@ deploy_script='
   bundle install
 
   # Deploy!
-  bundle exec cap "$CAP_ENV" deploy ignore_rsync_stage=true "$@"
+  bundle exec cap "$CAP_ENV" deploy "$@"
 '
 
 # Prints args to stderr
@@ -146,24 +155,7 @@ if test -n "$stage"; then
     -e CAP_ENV="$stage" \
     -w /app \
     "$ruby_image" \
-    sh -e -c "$deploy_script" ${extra_args[0]+"${extra_args[@]}"} # See below
-
-  # Here's why we're doing the song-and-dance from above:
-  # * The `extra_args` configuration is optional and can thus be empty
-  # * bash <= 4.3 thinks that "${foo[@]}" is an unset variable if it is an empty array
-  # * We need to conditionally pass "${extra_args[@]}" into the shell script without it exploding
-  #
-  # The features we're using are listed:
-  # * ${parameter+foo} outputs foo if `parameter` is _set_ (and possibly empty)
-  # * `parameter` in the above may be a reference to an array variable
-  # * `foo` is allowed to be an arbitrary expression
-  #
-  # As a result, we can write an expression that says this:
-  # 1. If ${extra_args[0]} exists (the left-hand side of the +) then
-  # 2. Subsitute "${extra_args[@]}" (the right-hand side of the +)
-  #
-  # All credit goes to the perlrun man page, where I first learned this trick:
-  # https://perldoc.perl.org/5.30.0/perlrun.html
+    sh -e -c "$deploy_script" "${script_args[@]}"
 
   # Now that we're done, exit - this skips the error-handling logic below
   exit 0
