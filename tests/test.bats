@@ -12,7 +12,7 @@ load helpers
   stub docker \
     "run --rm -it * : true"
 
-  run "$PWD/hooks/command"
+  run "$PWD/hooks/post-command"
 
   assert_success
   assert_line "Deploying master to dev"
@@ -31,7 +31,7 @@ load helpers
   stub docker \
     'run --rm -it * : echo "$@"'
 
-  run "$PWD/hooks/command"
+  run "$PWD/hooks/post-command"
 
   assert_success
 
@@ -46,7 +46,7 @@ load helpers
   export BUILDKITE_PLUGINS="$(create-config master=dev)"
   export BUILDKITE_BRANCH=ABC123-some-feature
 
-  run "$PWD/hooks/command"
+  run "$PWD/hooks/post-command"
 
   assert_success
   assert_line "Branch ABC123-some-feature has no deployment destination"
@@ -56,7 +56,7 @@ load helpers
   export BUILDKITE_PLUGINS="$(create-config)"
   export BUILDKITE_BRANCH=master
 
-  run "$PWD/hooks/command"
+  run "$PWD/hooks/post-command"
 
   assert_success
   assert_output --partial "You have not configured any stages"
@@ -67,7 +67,7 @@ load helpers
   export BUILDKITE_PLUGINS="$(create-config dev=master)"
   export BUILDKITE_BRANCH=master
 
-  run "$PWD/hooks/command"
+  run "$PWD/hooks/post-command"
 
   assert_success
   assert_output --partial "Try using 'master: dev' instead"
@@ -79,7 +79,7 @@ load helpers
   export BUILDKITE_PLUGINS="$(create-config master=dev)"
   export BUILDKITE_BRANCH=stable
 
-  run "$PWD/hooks/command"
+  run "$PWD/hooks/post-command"
 
   assert_failure
   assert_output --partial "Failed to determine a stage to deploy to"
@@ -91,7 +91,7 @@ load helpers
   export BUILDKITE_PLUGINS="$(create-config)"
   export BUILDKITE_BRANCH=master
 
-  run "$PWD/hooks/command"
+  run "$PWD/hooks/post-command"
 
   assert_failure
   assert_output --partial "Failed to determine a stage to deploy to"
@@ -104,7 +104,7 @@ load helpers
   export BUILDKITE_PLUGINS="$(create-config dev=master)"
   export BUILDKITE_BRANCH=master
 
-  run "$PWD/hooks/command"
+  run "$PWD/hooks/post-command"
 
   assert_failure
   assert_output --partial "Failed to determine a stage to deploy to"
