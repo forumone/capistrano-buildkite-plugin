@@ -32,7 +32,8 @@ script_args=(
   # of the start of $@ (which begins with $1).
   UNUSED
 
-  # We set this for all Capistrano invocations - by placing it here, we
+  # We set this for all Capistrano invocations so we might as well include it in the
+  # initial array.
   "ignore_rsync_stage=true"
 )
 
