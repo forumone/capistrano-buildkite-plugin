@@ -111,3 +111,18 @@ load helpers
   assert_output --partial "Try using 'master: dev' instead"
   assert_line "Current branch: master"
 }
+
+@test "Doesn't run if the command failed" {
+  export BUILDKITE_PLUGINS="$(create-config master=dev)"
+  export BUILDKITE_BRANCH=master
+  export BUILDKITE_COMMAND_EXIT_STATUS=1
+
+  stub docker
+
+  run "$PWD/hooks/post-command"
+
+  unstub docker
+
+  assert_success
+  assert_output --partial "Refusing to deploy due to failed build"
+}

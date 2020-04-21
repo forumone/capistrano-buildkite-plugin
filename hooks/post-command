@@ -2,6 +2,29 @@
 
 set -euo pipefail
 
+# Prints args to stderr
+print-error() {
+  echo "$@" >/dev/stderr
+}
+
+# Prints warning to stderr
+warn() {
+  print-error "WARNING:" "$@"
+}
+
+# This value is set by the Buildkite agent as part of its post-command hook phase.
+# cf. https://github.com/buildkite/agent/blob/bed05dda2d7bfb888d80c621af827ee2bce39144/bootstrap/bootstrap.go#L1331-L1333
+status="${BUILDKITE_COMMAND_EXIT_STATUS:-0}"
+
+if test "$status" -ne 0; then
+  warn "The command phase of this build exited with exit code $status"
+  warn "Refusing to deploy due to failed build"
+
+  # Other plugins that skip on failed builds exit with 0, so we'll continue that practice
+  # here.
+  exit 0
+fi
+
 # Arguments to pass to to the inline Capistrano shell script
 script_args=(
   # This is $0 in the script: when using the -c syntax (as in sh -c '...' foo bar), the
@@ -9,7 +32,8 @@ script_args=(
   # of the start of $@ (which begins with $1).
   UNUSED
 
-  # We set this for all Capistrano invocations - by placing it here, we
+  # We set this for all Capistrano invocations so we might as well include it in the
+  # initial array.
   "ignore_rsync_stage=true"
 )
 
@@ -114,16 +138,6 @@ deploy_script='
   # Deploy!
   bundle exec cap "$CAP_ENV" deploy "$@"
 '
-
-# Prints args to stderr
-print-error() {
-  echo "$@" >/dev/stderr
-}
-
-# Prints warning to stderr
-warn() {
-  print-error "WARNING:" "$@"
-}
 
 echo '~~~ :capistrano: Deploying...'
 
