@@ -1,4 +1,5 @@
 # Capistrano Deployment Buildkite Plugin
+[![Build status](https://badge.buildkite.com/7a8bae66a0291fec3a7db92cd62eec5e8019b7adf8edd4d4ba.svg?branch=master)](https://buildkite.com/forum-one/capistrano-buildkite-plugin)
 
 A [Buildkite plugin](https://buildkite.com/docs/agent/v3/plugins) to deploy a project using Capistrano.
 
@@ -9,7 +10,7 @@ This will deploy a project using the given branch-to-stage mapping. If the curre
 ```yaml
 steps:
   - plugins:
-      - forumone/capistrano#v0.3.0:
+      - forumone/capistrano#v0.3.1:
           branches:
             master: dev
             stable: staging
@@ -21,7 +22,7 @@ In this example, the plugin will fail if a Capistrano stage couldn't be found.
 ```yaml
 steps:
   - plugins:
-      - forumone/capistrano#v0.3.0:
+      - forumone/capistrano#v0.3.1:
           require-stage: true
           branches:
             master: dev
@@ -34,7 +35,7 @@ This runs a deployment by specifying additional arguments.
 ```yaml
 steps:
   - plugins:
-      - forumone/capistrano#v0.3.0:
+      - forumone/capistrano#v0.3.1:
           extra-args:
             - foo=bar
           branches:
