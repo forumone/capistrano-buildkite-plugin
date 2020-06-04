@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# The Capistrano plugin has to cover two scenarios:
+# 1. Code is built and deployed in a single build step
+# 2. Code to be deployed is downloaded from a plugin (such as forumone/extract)
+#
+# In the latter case, pipelines don't normally define a command in the YAML. This causes
+# the Buildkite agent to complain and fail the build. In order to work around this issue,
+# this hook exists to provide a default command implementation when none is provided.
+
+# 'eval ""' is allowed and does nothing: this means we don't need to provide any defaults.
+eval "$BUILDKITE_COMMAND"
