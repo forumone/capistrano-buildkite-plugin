@@ -10,7 +10,7 @@ This will deploy a project using the given branch-to-stage mapping. If the curre
 ```yaml
 steps:
   - plugins:
-      - forumone/capistrano#v0.3.1:
+      - forumone/capistrano#v0.4.0:
           branches:
             master: dev
             stable: staging
@@ -22,7 +22,7 @@ In this example, the plugin will fail if a Capistrano stage couldn't be found.
 ```yaml
 steps:
   - plugins:
-      - forumone/capistrano#v0.3.1:
+      - forumone/capistrano#v0.4.0:
           require-stage: true
           branches:
             master: dev
@@ -35,7 +35,7 @@ This runs a deployment by specifying additional arguments.
 ```yaml
 steps:
   - plugins:
-      - forumone/capistrano#v0.3.1:
+      - forumone/capistrano#v0.4.0:
           extra-args:
             - foo=bar
           branches:
