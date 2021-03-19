@@ -136,10 +136,11 @@ deploy_script='
   bundle install
 
   # Deploy!
+  echo "~~~ :capistrano: Deploying..."
   bundle exec cap "$CAP_ENV" deploy "$@"
 '
 
-echo '~~~ :capistrano: Deploying...'
+echo '~~~ :capistrano: Installing capistrano...'
 
 # Load plugin configuration
 config="$(echo "$BUILDKITE_PLUGINS" | jq -r "$get_config_filter")"
