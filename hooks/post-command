@@ -129,9 +129,7 @@ ruby_image="ruby:2.3-alpine"
 # shellcheck disable=SC2016
 deploy_script='
   # Install rsync
-  apk add --no-cache rsync
-  # Install build dependencies for JSON gem
-  apk add --no-cache make gcc musl-dev
+  apk add --no-cache rsync make gcc musl-dev git
 
   # Install dependencies
   bundle install
