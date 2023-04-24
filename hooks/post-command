@@ -130,6 +130,8 @@ ruby_image="ruby:2.3-alpine"
 deploy_script='
   # Install rsync
   apk add --no-cache rsync
+  # Install build dependencies for JSON gem
+  apk add --no-cache make gcc musl-dev
 
   # Install dependencies
   bundle install
