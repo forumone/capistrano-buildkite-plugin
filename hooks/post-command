@@ -118,7 +118,7 @@ reverse_branches_filter='
 '
 
 # Should this be configurable?
-ruby_image="ruby:2.3"
+ruby_image="ruby:2.3-alpine"
 
 # Script to inject into the Ruby container to perform Capistrano deployments - it's a
 # string like this because we don't get access to rsync by default, which is needed for
@@ -129,8 +129,7 @@ ruby_image="ruby:2.3"
 # shellcheck disable=SC2016
 deploy_script='
   # Install rsync
-  apt-get update -y
-  apt-get install -y rsync
+  apk add --no-cache rsync
 
   # Install dependencies
   bundle install
