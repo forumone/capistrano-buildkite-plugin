@@ -118,7 +118,7 @@ reverse_branches_filter='
 '
 
 # Should this be configurable?
-ruby_image="ruby:2.3-alpine"
+ruby_image="forumone/ruby-capistrano:2.3"
 
 # Script to inject into the Ruby container to perform Capistrano deployments - it's a
 # string like this because we don't get access to rsync by default, which is needed for
@@ -128,9 +128,6 @@ ruby_image="ruby:2.3-alpine"
 # container, not here.
 # shellcheck disable=SC2016
 deploy_script='
-  # Install rsync
-  apk add --no-cache rsync openssh-client make gcc musl-dev git
-
   # Install dependencies
   bundle install
 
